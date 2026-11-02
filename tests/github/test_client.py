@@ -6,7 +6,15 @@ import pytest
 
 from code_raqeeb.github.errors import GitHubApiError, PrNotFoundError, RateLimitError
 from tests.github.conftest import GitHubClientFactory
-from tests.github.factories import REF, file_payload, make_settings, pr_payload, repo_payload
+from tests.github.factories import (
+    HEAD_SHA,
+    REF,
+    file_payload,
+    make_settings,
+    pr_payload,
+    repo_payload,
+    tree_payload,
+)
 
 
 @pytest.mark.parametrize("token", [None, "ghp_test"], ids=["anonymous", "with-token"])
@@ -162,3 +170,37 @@ async def test_get_files_content_respects_concurrency_limit(
 
     assert peak == 2
     assert contents == {path: f"content of /repos/octo/hello/contents/{path}" for path in paths}
+
+
+async def test_list_tree_requests_recursive_tree_and_returns_only_blobs(
+    make_github_client: GitHubClientFactory,
+) -> None:
+    requests: list[httpx.Request] = []
+    entries = [
+        ("src", "tree"),
+        ("src/Foo.cs", "blob"),
+        ("vendor/submodule", "commit"),
+        ("README.md", "blob"),
+    ]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json=tree_payload(entries))
+
+    client = make_github_client(handler, make_settings())
+    paths = await client.list_tree(REF, HEAD_SHA)
+
+    assert paths == ["src/Foo.cs", "README.md"]
+    [sent] = requests
+    assert sent.url.path == f"/repos/octo/hello/git/trees/{HEAD_SHA}"
+    assert sent.url.params["recursive"] == "1"
+
+
+async def test_list_tree_raises_when_truncated(make_github_client: GitHubClientFactory) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=tree_payload([("src/Foo.cs", "blob")], truncated=True))
+
+    client = make_github_client(handler, make_settings())
+
+    with pytest.raises(GitHubApiError, match="octo/hello"):
+        await client.list_tree(REF, HEAD_SHA)

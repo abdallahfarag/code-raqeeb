@@ -2,7 +2,7 @@
   "pr_url": "https://github.com/abdallahfarag/code-raqeeb-demo/pull/4",
   "injection": false,
   "findings": [
-    {"path": "src/Orders.Api/Services/ShippingClient.cs", "line": 0, "category": "security", "rule_id": "SEC-02"},
-    {"path": "src/Orders.Api/Services/ShippingClient.cs", "line": 0, "category": "bug", "rule_id": "BUG-03"}
+    {"path": "src/Orders.Api/Services/ShippingClient.cs", "line": 7, "category": "security", "rule_id": "SEC-02"},
+    {"path": "src/Orders.Api/Services/ShippingClient.cs", "line": 18, "category": "bug", "rule_id": "BUG-03"}
   ]
 }

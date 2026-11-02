@@ -11,6 +11,7 @@ from code_raqeeb.rules.models import Category, ReviewRule
 DENSE = "dense"
 SPARSE = "sparse"
 _PREFETCH_FACTOR = 4
+_INDEXED = "indexed"
 
 
 class QdrantStore:
@@ -40,10 +41,14 @@ class QdrantStore:
                 )
 
     async def has_snapshot(self, repo: str, sha: str) -> bool:
-        result = await self._client.count(
-            self._code, count_filter=_snapshot_filter(repo, sha), exact=True
-        )
+        indexed = models.Filter(must=[_snapshot_filter(repo, sha), _match(_INDEXED, True)])
+        result = await self._client.count(self._code, count_filter=indexed, exact=True)
         return result.count > 0
+
+    async def mark_snapshot_indexed(self, repo: str, sha: str) -> None:
+        await self._client.set_payload(
+            self._code, payload={_INDEXED: True}, points=_snapshot_filter(repo, sha), wait=True
+        )
 
     async def upsert_chunks(
         self, chunks: Sequence[CodeChunk], embeddings: Sequence[Embedding]
@@ -127,7 +132,7 @@ def _point(key: str, embedding: Embedding, payload: dict[str, Any]) -> models.Po
     )
 
 
-def _match(field: str, value: str) -> models.FieldCondition:
+def _match(field: str, value: str | bool) -> models.FieldCondition:
     return models.FieldCondition(key=field, match=models.MatchValue(value=value))
 
 

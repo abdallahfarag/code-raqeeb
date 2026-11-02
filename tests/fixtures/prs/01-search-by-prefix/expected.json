@@ -2,6 +2,6 @@
   "pr_url": "https://github.com/abdallahfarag/code-raqeeb-demo/pull/1",
   "injection": false,
   "findings": [
-    {"path": "src/Orders.Api/Data/OrderRepository.cs", "line": 0, "category": "security", "rule_id": "SEC-01"}
+    {"path": "src/Orders.Api/Data/OrderRepository.cs", "line": 33, "category": "security", "rule_id": "SEC-01"}
   ]
 }

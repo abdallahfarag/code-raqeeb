@@ -56,6 +56,7 @@ async def index_snapshot(
     for batch in batched(chunks, _EMBED_BATCH):
         embeddings = await embedder.embed_documents([chunk.embedding_text for chunk in batch])
         await store.upsert_chunks(batch, embeddings)
+    await store.mark_snapshot_indexed(repo, sha)
 
     return IndexReport(repo=repo, sha=sha, skipped=False, files=len(paths), chunks=len(chunks))
 

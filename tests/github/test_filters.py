@@ -2,7 +2,7 @@ import pytest
 
 from code_raqeeb.github.diff import ChangedFile
 from code_raqeeb.github.errors import PrTooLargeError
-from code_raqeeb.github.filters import enforce_limits, skip_reason
+from code_raqeeb.github.filters import enforce_limits, path_skip_reason, skip_reason
 from code_raqeeb.github.models import FileStatus, PrFile
 
 PATCH = "@@ -1,1 +1,2 @@\n context\n+added"
@@ -33,6 +33,51 @@ def test_skip_reason(file: PrFile, reason: str) -> None:
 
 def test_normal_cs_file_is_reviewed() -> None:
     assert skip_reason(pr_file("src/App/Services/Greeter.cs")) is None
+
+
+@pytest.mark.parametrize(
+    ("path", "reason"),
+    [
+        pytest.param("packages.lock.json", "lockfile", id="nuget-lock"),
+        pytest.param("web/package-lock.json", "lockfile", id="npm-lock"),
+        pytest.param("web/yarn.lock", "lockfile", id="yarn-lock"),
+        pytest.param("web/pnpm-lock.yaml", "lockfile", id="pnpm-lock"),
+        pytest.param("bin/Foo.cs", "build output", id="bin-at-root"),
+        pytest.param("src/App/bin/Debug/Foo.cs", "build output", id="bin-nested"),
+        pytest.param("src/App/obj/Foo.cs", "build output", id="obj-nested"),
+        pytest.param("src/App/obj/project.assets.json", "build output", id="build-non-cs"),
+        pytest.param("README.md", "not a C# file", id="markdown"),
+        pytest.param("src/App.csproj", "not a C# file", id="csproj"),
+        pytest.param("src/Form1.Designer.cs", "generated code", id="designer"),
+        pytest.param("src/View.g.cs", "generated code", id="g-cs"),
+        pytest.param("src/View.g.i.cs", "generated code", id="g-i-cs"),
+        pytest.param("src/App.AssemblyInfo.cs", "generated code", id="assembly-info"),
+        pytest.param("Migrations/AppModelSnapshot.cs", "generated code", id="model-snapshot"),
+    ],
+)
+def test_path_skip_reason(path: str, reason: str) -> None:
+    assert path_skip_reason(path) == reason
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        pytest.param("Foo.cs", id="root"),
+        pytest.param("src/App/Services/Greeter.cs", id="nested"),
+        pytest.param("src/binary/Foo.cs", id="folder-containing-bin"),
+        pytest.param("src/bin.cs", id="file-named-bin"),
+    ],
+)
+def test_path_skip_reason_keeps_source_files(path: str) -> None:
+    assert path_skip_reason(path) is None
+
+
+def test_skip_reason_reports_deleted_before_path_reason() -> None:
+    assert skip_reason(pr_file("README.md", status="removed")) == "deleted"
+
+
+def test_skip_reason_reports_path_reason_before_missing_patch() -> None:
+    assert skip_reason(pr_file("README.md", patch=None)) == "not a C# file"
 
 
 def changed(additions: int, deletions: int = 0) -> ChangedFile:

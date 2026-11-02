@@ -45,6 +45,14 @@ def pr_payload(*, base_repo: Json | None) -> Json:
     }
 
 
+def tree_payload(entries: list[tuple[str, str]], *, truncated: bool = False) -> Json:
+    return {
+        "sha": HEAD_SHA,
+        "tree": [{"path": path, "type": kind} for path, kind in entries],
+        "truncated": truncated,
+    }
+
+
 def file_payload(
     filename: str,
     *,

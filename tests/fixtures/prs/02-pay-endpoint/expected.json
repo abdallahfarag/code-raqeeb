@@ -2,7 +2,7 @@
   "pr_url": "https://github.com/abdallahfarag/code-raqeeb-demo/pull/2",
   "injection": false,
   "findings": [
-    {"path": "src/Orders.Api/Controllers/OrdersController.cs", "line": 0, "category": "bug", "rule_id": "ASY-02"},
-    {"path": "src/Orders.Api/Services/OrderService.cs", "line": 0, "category": "bug", "rule_id": "ASY-01"}
+    {"path": "src/Orders.Api/Controllers/OrdersController.cs", "line": 27, "category": "bug", "rule_id": "ASY-02"},
+    {"path": "src/Orders.Api/Services/OrderService.cs", "line": 26, "category": "bug", "rule_id": "ASY-01"}
   ]
 }

@@ -2,7 +2,6 @@ import asyncio
 import sys
 
 import httpx
-from code_raqeeb.rag.indexer import RepoTooLargeError, index_rules, index_snapshot
 from qdrant_client import AsyncQdrantClient
 
 from code_raqeeb.config import get_settings
@@ -10,6 +9,7 @@ from code_raqeeb.github.client import GitHubClient
 from code_raqeeb.github.errors import GitHubError
 from code_raqeeb.github.service import load_pull_request
 from code_raqeeb.rag.embeddings import FastEmbedEmbedder
+from code_raqeeb.rag.indexer import RepoTooLargeError, index_rules, index_snapshot
 from code_raqeeb.rag.store import QdrantStore
 from code_raqeeb.rules.loader import get_rules
 

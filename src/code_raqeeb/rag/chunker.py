@@ -19,8 +19,14 @@ _MEMBER_NODES: dict[str, ChunkKind] = {
     "constructor_declaration": "constructor",
     "property_declaration": "property",
     "operator_declaration": "method",
+    "conversion_operator_declaration": "method",
     "destructor_declaration": "method",
 }
+_OPERATOR_NAME_FIELDS = {
+    "operator_declaration": "operator",
+    "conversion_operator_declaration": "type",
+}
+_PREPROC_BLOCKS = frozenset({"preproc_if", "preproc_elif", "preproc_else"})
 _WINDOW_LINES = 60
 
 
@@ -30,7 +36,7 @@ def _parser() -> Parser:
 
 
 def chunk_csharp(path: str, source: str, *, repo: str, sha: str, max_lines: int) -> list[CodeChunk]:
-    lines = source.splitlines()
+    lines = _split_lines(source)
     tree = _parser().parse(source.encode("utf-8"))
     chunks: list[CodeChunk] = []
 
@@ -58,11 +64,7 @@ def chunk_csharp(path: str, source: str, *, repo: str, sha: str, max_lines: int)
     def visit_type(node: Node, type_path: tuple[str, ...]) -> None:
         name_path = (*type_path, _name(node))
         body = node.child_by_field_name("body")
-        members = (
-            [child for child in body.named_children if child.type in _MEMBER_NODES]
-            if body is not None
-            else []
-        )
+        members = _members(body) if body is not None else []
         for member in members:
             symbol = ".".join((*name_path, _name(member)))
             chunks.append(make(member, symbol, _MEMBER_NODES[member.type]))
@@ -91,8 +93,30 @@ def chunk_csharp(path: str, source: str, *, repo: str, sha: str, max_lines: int)
     return chunks
 
 
+def _split_lines(source: str) -> list[str]:
+    lines = [line.removesuffix("\r") for line in source.split("\n")]
+    return lines[:-1] if lines[-1] == "" else lines
+
+
+def _members(node: Node) -> list[Node]:
+    members: list[Node] = []
+    for child in node.named_children:
+        if child.type in _MEMBER_NODES:
+            members.append(child)
+        elif child.type in _PREPROC_BLOCKS:
+            members.extend(_members(child))
+    return members
+
+
 def _name(node: Node) -> str:
-    name = node.child_by_field_name("name")
-    if name is None or name.text is None:
+    operator_field = _OPERATOR_NAME_FIELDS.get(node.type)
+    if operator_field is not None:
+        return f"operator {_field_text(node, operator_field)}"
+    return _field_text(node, "name")
+
+
+def _field_text(node: Node, field: str) -> str:
+    child = node.child_by_field_name(field)
+    if child is None or child.text is None:
         return "<anonymous>"
-    return name.text.decode("utf-8")
+    return child.text.decode("utf-8")
