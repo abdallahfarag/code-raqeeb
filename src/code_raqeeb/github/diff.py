@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from pydantic import BaseModel, ConfigDict
 
 from code_raqeeb.github.models import FileStatus
+from code_raqeeb.helper.text import split_lines
 
 _HUNK_HEADER = re.compile(r"^@@ -\d+(?:,\d+)? \+(?P<start>\d+)(?:,(?P<length>\d+))? @@")
 
@@ -55,7 +56,7 @@ def parse_patch(patch: str) -> tuple[DiffHunk, ...]:
     hunks: list[DiffHunk] = []
     current: _HunkBuilder | None = None
 
-    for raw_line in patch.splitlines():
+    for raw_line in split_lines(patch):
         header = _HUNK_HEADER.match(raw_line)
         if header is not None:
             if current is not None:
@@ -83,7 +84,7 @@ def parse_patch(patch: str) -> tuple[DiffHunk, ...]:
 def render_numbered_patch(patch: str) -> str:
     rendered: list[str] = []
     next_line = 0
-    for raw_line in patch.splitlines():
+    for raw_line in split_lines(patch):
         header = _HUNK_HEADER.match(raw_line)
         if header is not None:
             next_line = int(header["start"])

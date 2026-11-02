@@ -32,6 +32,7 @@ def load_files(folder: Path) -> dict[str, PrFile]:
 
 def to_changed_file(file: PrFile) -> ChangedFile:
     return ChangedFile(
+        patch=file.patch or "",
         path=file.filename,
         status=file.status,
         additions=file.additions,

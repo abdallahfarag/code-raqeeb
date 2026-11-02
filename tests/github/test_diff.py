@@ -8,7 +8,9 @@ def hunk(start: int, length: int, added: set[int]) -> DiffHunk:
 
 
 def changed_file(*hunks: DiffHunk) -> ChangedFile:
-    return ChangedFile(path="src/Foo.cs", status="modified", additions=0, deletions=0, hunks=hunks)
+    return ChangedFile(
+        patch="", path="src/Foo.cs", status="modified", additions=0, deletions=0, hunks=hunks
+    )
 
 
 SINGLE_HUNK = """\

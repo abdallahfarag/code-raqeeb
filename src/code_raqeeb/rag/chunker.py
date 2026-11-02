@@ -3,6 +3,7 @@ from functools import lru_cache
 from tree_sitter import Node, Parser
 from tree_sitter_language_pack import get_parser
 
+from code_raqeeb.helper.text import split_lines
 from code_raqeeb.rag.models import ChunkKind, CodeChunk
 
 _TYPE_NODES = frozenset(
@@ -36,13 +37,17 @@ def _parser() -> Parser:
 
 
 def chunk_csharp(path: str, source: str, *, repo: str, sha: str, max_lines: int) -> list[CodeChunk]:
-    lines = _split_lines(source)
-    tree = _parser().parse(source.encode("utf-8"))
+    lines = split_lines(source)
+    data = source.encode("utf-8")
+    tree = _parser().parse(data)
     chunks: list[CodeChunk] = []
 
+    def line_at(byte: int) -> int:
+        return data.count(b"\n", 0, byte) + 1
+
     def make(node: Node, symbol: str, kind: ChunkKind) -> CodeChunk:
-        start = node.start_point.row + 1
-        end = min(node.end_point.row + 1, start + max_lines - 1)
+        start = line_at(node.start_byte)
+        end = min(line_at(node.end_byte), start + max_lines - 1)
         return CodeChunk(
             repo=repo,
             sha=sha,
@@ -91,11 +96,6 @@ def chunk_csharp(path: str, source: str, *, repo: str, sha: str, max_lines: int)
                 )
             )
     return chunks
-
-
-def _split_lines(source: str) -> list[str]:
-    lines = [line.removesuffix("\r") for line in source.split("\n")]
-    return lines[:-1] if lines[-1] == "" else lines
 
 
 def _members(node: Node) -> list[Node]:

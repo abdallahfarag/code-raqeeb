@@ -1,3 +1,7 @@
+import json
+import subprocess
+import sys
+
 import pytest
 
 from code_raqeeb.rag.chunker import chunk_csharp
@@ -377,3 +381,56 @@ def test_methods_in_every_preprocessor_branch_are_chunked() -> None:
 
 def test_class_with_only_conditional_members_has_no_type_chunk() -> None:
     assert {c.kind for c in chunk(CONDITIONAL_BRANCHES)} == {"method"}
+
+
+# tree-sitter 0.26.0 over-frees Point rows above 256, CPython's cached small ints. That corrupts
+# the heap, so these run in a subprocess: in-process they would take the whole test run down.
+_LARGE_CLASS = r"""
+methods = "".join(f"    public int M{n}() {{ return {n}; }}\n" for n in range(400))
+source = "class Service\n{\n" + methods + "}\n"
+"""
+_LINES_PAST_256 = (
+    "import json\n"
+    "from code_raqeeb.rag.chunker import chunk_csharp\n"
+    + _LARGE_CLASS
+    + r"""
+chunks = chunk_csharp("F.cs", source, repo="r", sha="s", max_lines=100)
+print(json.dumps({c.symbol: [c.start_line, c.end_line] for c in chunks}))
+"""
+)
+_REPEATED_LARGE_FILES = (
+    "from code_raqeeb.rag.chunker import chunk_csharp\n"
+    + _LARGE_CLASS
+    + r"""
+for _ in range(30):
+    chunk_csharp("F.cs", source, repo="r", sha="s", max_lines=100)
+    [str(n) * 3 for n in range(5000)]
+"""
+)
+
+
+def run_isolated(script: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, timeout=120, check=False
+    )
+
+
+def test_line_numbers_are_correct_past_line_256() -> None:
+    result = run_isolated(_LINES_PAST_256)
+
+    assert result.returncode == 0, result.stderr[-500:]
+    expected = {f"Service.M{n}": [n + 3, n + 3] for n in range(400)}
+    assert json.loads(result.stdout) == expected
+
+
+def test_chunking_large_files_repeatedly_does_not_crash_the_process() -> None:
+    result = run_isolated(_REPEATED_LARGE_FILES)
+
+    assert result.returncode == 0, result.stderr[-500:]
+
+
+def test_non_ascii_text_does_not_shift_line_numbers() -> None:
+    [method] = chunk('class C\n{\n    // تعليق ✓\n    string S() => "é";\n}\n')
+
+    assert (method.start_line, method.end_line) == (4, 4)
+    assert method.text == '    string S() => "é";'

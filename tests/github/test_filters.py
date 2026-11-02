@@ -82,7 +82,12 @@ def test_skip_reason_reports_path_reason_before_missing_patch() -> None:
 
 def changed(additions: int, deletions: int = 0) -> ChangedFile:
     return ChangedFile(
-        path="src/Foo.cs", status="modified", additions=additions, deletions=deletions, hunks=()
+        patch="",
+        path="src/Foo.cs",
+        status="modified",
+        additions=additions,
+        deletions=deletions,
+        hunks=(),
     )
 
 

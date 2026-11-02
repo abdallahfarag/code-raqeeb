@@ -2,6 +2,7 @@ from langchain_core.tools import BaseTool, tool
 
 from code_raqeeb.github.errors import GitHubError
 from code_raqeeb.github.service import PullRequestBundle
+from code_raqeeb.helper.text import split_lines
 from code_raqeeb.review.context import ReviewContext
 
 _MAX_READ_LINES = 200
@@ -59,7 +60,7 @@ def build_tools(ctx: ReviewContext, bundle: PullRequestBundle) -> list[BaseTool]
             content = await ctx.github.get_file_content(bundle.ref, path, bundle.head_sha)
         except GitHubError as exc:
             return f"Could not read {path}: {exc}"
-        selected = content.splitlines()[start_line - 1 : end_line]
+        selected = split_lines(content)[start_line - 1 : end_line]
         numbered = [
             f"{number:>6}  {text}" for number, text in enumerate(selected, start=start_line)
         ]
