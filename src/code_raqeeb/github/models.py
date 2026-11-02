@@ -65,3 +65,14 @@ class PrFile(BaseModel):
     deletions: int
     patch: str | None = None
     previous_filename: str | None = None
+
+
+class TreeEntry(BaseModel):
+    path: str
+    type: Literal["blob", "tree", "commit"]
+
+
+class GitTree(BaseModel):
+    sha: str
+    tree: list[TreeEntry]
+    truncated: bool

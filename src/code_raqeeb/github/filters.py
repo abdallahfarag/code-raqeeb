@@ -20,10 +20,8 @@ class SkippedFile(BaseModel):
     reason: str
 
 
-def skip_reason(file: PrFile) -> str | None:
-    path = PurePosixPath(file.filename)
-    if file.status == "removed":
-        return "deleted"
+def path_skip_reason(path_text: str) -> str | None:
+    path = PurePosixPath(path_text)
     if path.name in _LOCKFILES:
         return "lockfile"
     if _BUILD_FOLDERS.intersection(path.parts):
@@ -32,6 +30,15 @@ def skip_reason(file: PrFile) -> str | None:
         return "not a C# file"
     if path.name.endswith(_GENERATED_SUFFIXES):
         return "generated code"
+    return None
+
+
+def skip_reason(file: PrFile) -> str | None:
+    if file.status == "removed":
+        return "deleted"
+    reason = path_skip_reason(file.filename)
+    if reason is not None:
+        return reason
     if file.patch is None:
         return "no diff (binary or too large)"
     return None

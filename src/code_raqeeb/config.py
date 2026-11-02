@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr | None = None
     github_token: SecretStr | None = None
 
+    qdrant_code_collection: str = "code_chunks"
+    qdrant_rules_collection: str = "review_rules"
+    dense_embedding_model: str = "jinaai/jina-embeddings-v2-base-code"
+    sparse_embedding_model: str = "Qdrant/bm25"
+    max_index_files: int = Field(default=500, ge=1)
+    max_chunk_lines: int = Field(default=150, ge=10)
+
 
 @lru_cache
 def get_settings() -> Settings:

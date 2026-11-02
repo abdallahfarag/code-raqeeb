@@ -8,7 +8,7 @@ from pydantic import TypeAdapter
 
 from code_raqeeb.config import Settings
 from code_raqeeb.github.errors import GitHubApiError, PrNotFoundError, RateLimitError
-from code_raqeeb.github.models import PrFile, PrRef, PullRequest
+from code_raqeeb.github.models import GitTree, PrFile, PrRef, PullRequest
 
 _PER_PAGE = 100
 _MAX_PAGES = 30  # GitHub returns at most 3,000 files per PR
@@ -82,6 +82,15 @@ class GitHubClient:
                 raise GitHubApiError(f"Network error calling GitHub: {exc}") from exc
         _raise_for_status(response)
         return response
+
+    async def list_tree(self, ref: PrRef, sha: str) -> list[str]:
+        response = await self._get(
+            f"/repos/{ref.full_name}/git/trees/{sha}", params={"recursive": 1}
+        )
+        tree = GitTree.model_validate(response.json())
+        if tree.truncated:
+            raise GitHubApiError(f"The file tree of {ref.full_name} is too large to list")
+        return [entry.path for entry in tree.tree if entry.type == "blob"]
 
 
 def _raise_for_status(response: httpx.Response) -> None:
