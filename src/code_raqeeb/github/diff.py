@@ -22,7 +22,7 @@ class DiffHunk(BaseModel):
 
 class ChangedFile(BaseModel):
     model_config = ConfigDict(frozen=True)
-
+    patch: str
     path: str
     status: FileStatus
     additions: int
@@ -78,3 +78,24 @@ def parse_patch(patch: str) -> tuple[DiffHunk, ...]:
     if current is not None:
         hunks.append(current.build())
     return tuple(hunks)
+
+
+def render_numbered_patch(patch: str) -> str:
+    rendered: list[str] = []
+    next_line = 0
+    for raw_line in patch.splitlines():
+        header = _HUNK_HEADER.match(raw_line)
+        if header is not None:
+            next_line = int(header["start"])
+            rendered.append(raw_line)
+        elif raw_line.startswith("+"):
+            rendered.append(f"{next_line:>6} + {raw_line[1:]}")
+            next_line += 1
+        elif raw_line.startswith("-"):
+            rendered.append(f"{'':>6} - {raw_line[1:]}")
+        elif raw_line.startswith("\\"):
+            continue
+        else:
+            rendered.append(f"{next_line:>6}   {raw_line[1:]}")
+            next_line += 1
+    return "\n".join(rendered)

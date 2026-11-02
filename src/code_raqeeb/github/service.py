@@ -44,6 +44,7 @@ async def load_pull_request(
             continue
         files.append(
             ChangedFile(
+                patch=pr_file.patch,
                 path=pr_file.filename,
                 status=pr_file.status,
                 additions=pr_file.additions,

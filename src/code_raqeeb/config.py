@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     max_index_files: int = Field(default=500, ge=1)
     max_chunk_lines: int = Field(default=150, ge=10)
 
+    llm_model: str = "gemini-3.5-flash-lite"
+    llm_requests_per_minute: int = Field(default=8, ge=1)
+    llm_max_retries: int = Field(default=3, ge=0)
+    review_concurrency: int = Field(default=3, ge=1)
+    max_tool_rounds: int = Field(default=2, ge=0)
+
 
 @lru_cache
 def get_settings() -> Settings:
