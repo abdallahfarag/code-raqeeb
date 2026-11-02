@@ -1,0 +1,25 @@
+{
+  "number": 1,
+  "title": "Add order search by customer name prefix",
+  "state": "open",
+  "html_url": "https://github.com/abdallahfarag/code-raqeeb-demo/pull/1",
+  "base": {
+    "ref": "main",
+    "sha": "8e5724b7ff3a92ce0aeb4271c2e36e8de1ab40cf",
+    "repo": {
+      "full_name": "abdallahfarag/code-raqeeb-demo",
+      "private": false
+    }
+  },
+  "head": {
+    "ref": "feature/search-by-prefix",
+    "sha": "dbaba851529d43e0ee0f2bcd3be7b79866c57ebe",
+    "repo": {
+      "full_name": "abdallahfarag/code-raqeeb-demo",
+      "private": false
+    }
+  },
+  "additions": 28,
+  "deletions": 0,
+  "changed_files": 3
+}

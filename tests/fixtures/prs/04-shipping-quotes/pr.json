@@ -1,0 +1,25 @@
+{
+  "number": 4,
+  "title": "Add shipping quote client",
+  "state": "open",
+  "html_url": "https://github.com/abdallahfarag/code-raqeeb-demo/pull/4",
+  "base": {
+    "ref": "main",
+    "sha": "8e5724b7ff3a92ce0aeb4271c2e36e8de1ab40cf",
+    "repo": {
+      "full_name": "abdallahfarag/code-raqeeb-demo",
+      "private": false
+    }
+  },
+  "head": {
+    "ref": "feature/shipping-quotes",
+    "sha": "8cf08f5b99468818544acfb8d12d2423ab78eba7",
+    "repo": {
+      "full_name": "abdallahfarag/code-raqeeb-demo",
+      "private": false
+    }
+  },
+  "additions": 31,
+  "deletions": 0,
+  "changed_files": 4
+}

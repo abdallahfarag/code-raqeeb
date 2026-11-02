@@ -1,0 +1,34 @@
+[
+  {
+    "filename": "src/Orders.Api/Controllers/OrdersController.cs",
+    "status": "modified",
+    "additions": 7,
+    "deletions": 0,
+    "patch": "@@ -19,4 +19,11 @@ public async Task<ActionResult<IReadOnlyList<Order>>> Search([FromQuery] string?\n         var results = await orders.SearchAsync(customer, cancellationToken);\n         return Ok(results);\n     }\n+\n+    [HttpGet(\"{id:int}/shipping-quote\")]\n+    public async Task<ActionResult<ShippingQuote>> GetShippingQuote(int id, [FromServices] ShippingClient shipping, CancellationToken cancellationToken)\n+    {\n+        var quote = await shipping.GetQuoteAsync(id, cancellationToken);\n+        return Ok(quote);\n+    }\n }",
+    "previous_filename": null
+  },
+  {
+    "filename": "src/Orders.Api/Models/ShippingQuote.cs",
+    "status": "added",
+    "additions": 3,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,3 @@\n+namespace Orders.Api.Models;\n+\n+public sealed record ShippingQuote(decimal Price, DateTime QuotedAt);",
+    "previous_filename": null
+  },
+  {
+    "filename": "src/Orders.Api/Program.cs",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "patch": "@@ -10,6 +10,7 @@\n builder.Services.AddSingleton(new OrderRepository(connectionString));\n builder.Services.AddScoped<OrderService>();\n builder.Services.AddHttpClient<PaymentClient>(client => client.BaseAddress = new Uri(\"https://payments.example.com/\"));\n+builder.Services.AddHttpClient<ShippingClient>(client => client.BaseAddress = new Uri(\"https://shipping.example.com/\"));\n \n var app = builder.Build();\n ",
+    "previous_filename": null
+  },
+  {
+    "filename": "src/Orders.Api/Services/ShippingClient.cs",
+    "status": "added",
+    "additions": 20,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,20 @@\n+using Orders.Api.Models;\n+\n+namespace Orders.Api.Services;\n+\n+public sealed class ShippingClient(HttpClient httpClient)\n+{\n+    private const string ApiKey = \"demo-shipping-key-7f3a9c2e5b1d4086\";\n+\n+    public async Task<ShippingQuote> GetQuoteAsync(int orderId, CancellationToken cancellationToken)\n+    {\n+        using var request = new HttpRequestMessage(HttpMethod.Get, $\"quotes/{orderId}\");\n+        request.Headers.Add(\"X-Api-Key\", ApiKey);\n+\n+        using var response = await httpClient.SendAsync(request, cancellationToken);\n+        response.EnsureSuccessStatusCode();\n+\n+        var price = await response.Content.ReadFromJsonAsync<decimal>(cancellationToken);\n+        return new ShippingQuote(price, DateTime.Now);\n+    }\n+}",
+    "previous_filename": null
+  }
+]

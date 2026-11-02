@@ -1,0 +1,34 @@
+[
+  {
+    "filename": "src/Orders.Api/Controllers/OrdersController.cs",
+    "status": "modified",
+    "additions": 7,
+    "deletions": 0,
+    "patch": "@@ -19,4 +19,11 @@ public async Task<ActionResult<IReadOnlyList<Order>>> Search([FromQuery] string?\n         var results = await orders.SearchAsync(customer, cancellationToken);\n         return Ok(results);\n     }\n+\n+    [HttpPost(\"{id:int}/refund\")]\n+    public async Task<IActionResult> Refund(int id, [FromBody] RefundRequest request, [FromServices] RefundClient refunds, CancellationToken cancellationToken)\n+    {\n+        var refunded = await refunds.RefundAsync(id, request.Amount, cancellationToken);\n+        return refunded ? NoContent() : StatusCode(StatusCodes.Status502BadGateway);\n+    }\n }",
+    "previous_filename": null
+  },
+  {
+    "filename": "src/Orders.Api/Models/RefundRequest.cs",
+    "status": "added",
+    "additions": 3,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,3 @@\n+namespace Orders.Api.Models;\n+\n+public sealed record RefundRequest(decimal Amount);",
+    "previous_filename": null
+  },
+  {
+    "filename": "src/Orders.Api/Program.cs",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "patch": "@@ -10,6 +10,7 @@\n builder.Services.AddSingleton(new OrderRepository(connectionString));\n builder.Services.AddScoped<OrderService>();\n builder.Services.AddHttpClient<PaymentClient>(client => client.BaseAddress = new Uri(\"https://payments.example.com/\"));\n+builder.Services.AddScoped<RefundClient>();\n \n var app = builder.Build();\n ",
+    "previous_filename": null
+  },
+  {
+    "filename": "src/Orders.Api/Services/RefundClient.cs",
+    "status": "added",
+    "additions": 21,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,21 @@\n+namespace Orders.Api.Services;\n+\n+public sealed class RefundClient(ILogger<RefundClient> logger)\n+{\n+    public async Task<bool> RefundAsync(int orderId, decimal amount, CancellationToken cancellationToken)\n+    {\n+        try\n+        {\n+            using var client = new HttpClient();\n+            using var response = await client.PostAsJsonAsync(\"https://payments.example.com/refunds\", new { orderId, amount }, cancellationToken);\n+            response.EnsureSuccessStatusCode();\n+\n+            logger.LogInformation(\"Refunded {Amount} for order {OrderId}\", amount, orderId);\n+            return true;\n+        }\n+        catch\n+        {\n+            return false;\n+        }\n+    }\n+}",
+    "previous_filename": null
+  }
+]

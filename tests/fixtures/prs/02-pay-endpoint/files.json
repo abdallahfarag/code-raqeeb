@@ -1,0 +1,26 @@
+[
+  {
+    "filename": "src/Orders.Api/Controllers/OrdersController.cs",
+    "status": "modified",
+    "additions": 8,
+    "deletions": 0,
+    "patch": "@@ -19,4 +19,12 @@ public async Task<ActionResult<IReadOnlyList<Order>>> Search([FromQuery] string?\n         var results = await orders.SearchAsync(customer, cancellationToken);\n         return Ok(results);\n     }\n+\n+    [HttpPost(\"{id:int}/pay\")]\n+    public IActionResult Pay(int id, [FromBody] PayOrderRequest request)\n+    {\n+        var order = new Order(id, request.CustomerName, request.Amount, DateTime.UtcNow);\n+        var paid = orders.PayAsync(order, CancellationToken.None).Result;\n+        return paid ? NoContent() : StatusCode(StatusCodes.Status502BadGateway);\n+    }\n }",
+    "previous_filename": null
+  },
+  {
+    "filename": "src/Orders.Api/Models/PayOrderRequest.cs",
+    "status": "added",
+    "additions": 3,
+    "deletions": 0,
+    "patch": "@@ -0,0 +1,3 @@\n+namespace Orders.Api.Models;\n+\n+public sealed record PayOrderRequest(string CustomerName, decimal Amount);",
+    "previous_filename": null
+  },
+  {
+    "filename": "src/Orders.Api/Services/OrderService.cs",
+    "status": "modified",
+    "additions": 7,
+    "deletions": 0,
+    "patch": "@@ -13,6 +13,7 @@ public async Task<bool> PayAsync(Order order, CancellationToken cancellationToke\n         try\n         {\n             await payments.ChargeAsync(order.Id, order.Total, cancellationToken);\n+            SendReceipt(order);\n             return true;\n         }\n         catch (HttpRequestException ex)\n@@ -21,4 +22,10 @@ public async Task<bool> PayAsync(Order order, CancellationToken cancellationToke\n             return false;\n         }\n     }\n+\n+    public async void SendReceipt(Order order)\n+    {\n+        await Task.Delay(100);\n+        logger.LogInformation(\"Receipt sent to {CustomerName} for order {OrderId}\", order.CustomerName, order.Id);\n+    }\n }",
+    "previous_filename": null
+  }
+]

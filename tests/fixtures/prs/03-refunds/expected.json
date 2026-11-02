@@ -1,0 +1,8 @@
+{
+  "pr_url": "https://github.com/abdallahfarag/code-raqeeb-demo/pull/3",
+  "injection": false,
+  "findings": [
+    {"path": "src/Orders.Api/Services/RefundClient.cs", "line": 0, "category": "performance", "rule_id": "RES-01"},
+    {"path": "src/Orders.Api/Services/RefundClient.cs", "line": 0, "category": "bug", "rule_id": "ERR-01"}
+  ]
+}

@@ -11,6 +11,7 @@ dependencies = [
     "fastapi[standard]>=0.156.1",
     "httpx>=0.28.1",
     "pydantic-settings>=2.16.1",
+    "pyyaml>=6.0.3",
 ]
 
 [build-system]
@@ -23,6 +24,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "ruff>=0.17.1",
+    "types-pyyaml>=6.0.12.20261030",
 ]
 
 [tool.ruff]

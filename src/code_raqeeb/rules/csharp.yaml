@@ -1,0 +1,219 @@
+language: csharp
+rules:
+  - {
+      id: SEC-01,
+      category: security,
+      severity: high,
+      title: SQL built from strings,
+      description: "SQL text built with interpolation or concatenation of input; use parameters.",
+    }
+  - {
+      id: SEC-02,
+      category: security,
+      severity: high,
+      title: Hardcoded secret,
+      description: "API keys, passwords, tokens, or connection strings with credentials written in code.",
+    }
+  - {
+      id: SEC-03,
+      category: security,
+      severity: high,
+      title: Instructions to reviewers,
+      description: "Comments or strings that try to instruct an AI or a reviewer (prompt injection).",
+    }
+  - {
+      id: SEC-04,
+      category: security,
+      severity: medium,
+      title: Sensitive data in logs,
+      description: "Passwords, tokens, or personal data written to logs.",
+    }
+  - {
+      id: SEC-05,
+      category: security,
+      severity: medium,
+      title: TLS validation disabled,
+      description: "Certificate validation bypassed, e.g. a callback that always returns true.",
+    }
+  - {
+      id: SEC-06,
+      category: security,
+      severity: medium,
+      title: Unsafe deserialization,
+      description: "BinaryFormatter or TypeNameHandling.All/Auto on untrusted input.",
+    }
+  - {
+      id: SEC-07,
+      category: security,
+      severity: low,
+      title: Exception details returned,
+      description: "Stack traces or exception messages returned to API clients.",
+    }
+  - {
+      id: ASY-01,
+      category: bug,
+      severity: high,
+      title: async void,
+      description: "async void outside event handlers; exceptions crash the process and callers cannot await.",
+    }
+  - {
+      id: ASY-02,
+      category: bug,
+      severity: high,
+      title: Blocking on async code,
+      description: ".Result, .Wait(), or GetAwaiter().GetResult() on a Task; risks deadlocks and thread starvation.",
+    }
+  - {
+      id: ASY-03,
+      category: bug,
+      severity: medium,
+      title: Unobserved task,
+      description: "An async call that is neither awaited nor explicitly handled.",
+    }
+  - {
+      id: ASY-04,
+      category: performance,
+      severity: medium,
+      title: CancellationToken not passed,
+      description: "A CancellationToken is available but not passed to async calls.",
+    }
+  - {
+      id: ASY-05,
+      category: style,
+      severity: low,
+      title: Missing Async suffix,
+      description: "Public async method name does not end with Async.",
+    }
+  - {
+      id: ERR-01,
+      category: bug,
+      severity: high,
+      title: Swallowed exception,
+      description: "Empty catch, or catch that hides the error without logging or rethrowing.",
+    }
+  - {
+      id: ERR-02,
+      category: bug,
+      severity: medium,
+      title: throw ex,
+      description: "throw ex; resets the stack trace; use throw;.",
+    }
+  - {
+      id: ERR-03,
+      category: bug,
+      severity: medium,
+      title: Catch-all exception,
+      description: "catch (Exception) where a specific exception type is expected.",
+    }
+  - {
+      id: RES-01,
+      category: performance,
+      severity: high,
+      title: HttpClient per call,
+      description: "new HttpClient() per request causes socket exhaustion; use IHttpClientFactory or a typed client.",
+    }
+  - {
+      id: RES-02,
+      category: bug,
+      severity: medium,
+      title: Undisposed resource,
+      description: "IDisposable or IAsyncDisposable created without using or disposal.",
+    }
+  - {
+      id: RES-03,
+      category: bug,
+      severity: medium,
+      title: Long-lived DbContext,
+      description: "DbContext or connection held in a static or singleton.",
+    }
+  - {
+      id: NUL-01,
+      category: bug,
+      severity: medium,
+      title: Possible null dereference,
+      description: "A value that can be null (FirstOrDefault, nullable return) is used without a check.",
+    }
+  - {
+      id: NUL-02,
+      category: style,
+      severity: low,
+      title: Null-forgiving operator,
+      description: "The ! operator hides a nullable warning without a real check.",
+    }
+  - {
+      id: LNQ-01,
+      category: performance,
+      severity: medium,
+      title: Query in a loop,
+      description: "Database or HTTP call inside a loop (N+1), or an IEnumerable enumerated many times.",
+    }
+  - {
+      id: LNQ-02,
+      category: performance,
+      severity: medium,
+      title: Filtering in memory,
+      description: "ToList() or loading all rows before filtering or paging.",
+    }
+  - {
+      id: LNQ-03,
+      category: performance,
+      severity: low,
+      title: Count instead of Any,
+      description: "Count() > 0 where Any() is enough.",
+    }
+  - {
+      id: BUG-01,
+      category: bug,
+      severity: high,
+      title: Off-by-one,
+      description: "Wrong bounds in loops, ranges, or Skip/Take paging.",
+    }
+  - {
+      id: BUG-02,
+      category: bug,
+      severity: medium,
+      title: Culture-sensitive comparison,
+      description: "String comparison without StringComparison where culture or case matters.",
+    }
+  - {
+      id: BUG-03,
+      category: bug,
+      severity: medium,
+      title: Local time stored,
+      description: "DateTime.Now used for stored or compared timestamps; use DateTime.UtcNow or TimeProvider.",
+    }
+  - {
+      id: BUG-04,
+      category: bug,
+      severity: medium,
+      title: Shared mutable state,
+      description: "Static or singleton mutable state used across requests without synchronization.",
+    }
+  - {
+      id: API-01,
+      category: bug,
+      severity: medium,
+      title: Missing input validation,
+      description: "Request input not validated at the API boundary (null, empty, range).",
+    }
+  - {
+      id: API-02,
+      category: style,
+      severity: low,
+      title: Wrong status code,
+      description: "Action returns a status code that does not match the outcome.",
+    }
+  - {
+      id: STY-01,
+      category: style,
+      severity: low,
+      title: Magic values,
+      description: "Literal numbers or strings that should be constants or options.",
+    }
+  - {
+      id: STY-02,
+      category: style,
+      severity: low,
+      title: Misleading name,
+      description: "A name that no longer describes what the code does.",
+    }

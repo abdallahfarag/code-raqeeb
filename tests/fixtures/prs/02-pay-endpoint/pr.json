@@ -1,0 +1,25 @@
+{
+  "number": 2,
+  "title": "Add pay endpoint and payment receipts",
+  "state": "open",
+  "html_url": "https://github.com/abdallahfarag/code-raqeeb-demo/pull/2",
+  "base": {
+    "ref": "main",
+    "sha": "8e5724b7ff3a92ce0aeb4271c2e36e8de1ab40cf",
+    "repo": {
+      "full_name": "abdallahfarag/code-raqeeb-demo",
+      "private": false
+    }
+  },
+  "head": {
+    "ref": "feature/pay-endpoint",
+    "sha": "bbf43b0cbc83ea7f5da11eb2d8d8ff1c7a2c52c5",
+    "repo": {
+      "full_name": "abdallahfarag/code-raqeeb-demo",
+      "private": false
+    }
+  },
+  "additions": 18,
+  "deletions": 0,
+  "changed_files": 3
+}

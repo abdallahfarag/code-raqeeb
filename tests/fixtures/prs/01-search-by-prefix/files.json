@@ -1,0 +1,26 @@
+[
+  {
+    "filename": "src/Orders.Api/Controllers/OrdersController.cs",
+    "status": "modified",
+    "additions": 7,
+    "deletions": 0,
+    "patch": "@@ -19,4 +19,11 @@ public async Task<ActionResult<IReadOnlyList<Order>>> Search([FromQuery] string?\n         var results = await orders.SearchAsync(customer, cancellationToken);\n         return Ok(results);\n     }\n+\n+    [HttpGet(\"prefix/{prefix}\")]\n+    public async Task<ActionResult<IReadOnlyList<Order>>> SearchByPrefix(string prefix, CancellationToken cancellationToken)\n+    {\n+        var results = await orders.SearchByPrefixAsync(prefix, cancellationToken);\n+        return Ok(results);\n+    }\n }",
+    "previous_filename": null
+  },
+  {
+    "filename": "src/Orders.Api/Data/OrderRepository.cs",
+    "status": "modified",
+    "additions": 18,
+    "deletions": 0,
+    "patch": "@@ -24,6 +24,24 @@ public async Task<IReadOnlyList<Order>> SearchByCustomerAsync(string customerNam\n         return orders;\n     }\n \n+    public async Task<IReadOnlyList<Order>> SearchByPrefixAsync(string prefix, CancellationToken cancellationToken)\n+    {\n+        await using var connection = new SqliteConnection(connectionString);\n+        await connection.OpenAsync(cancellationToken);\n+\n+        await using var command = connection.CreateCommand();\n+        command.CommandText = $\"SELECT Id, CustomerName, Total, CreatedAtUtc FROM Orders WHERE CustomerName LIKE '{prefix}%'\";\n+\n+        var orders = new List<Order>();\n+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);\n+        while (await reader.ReadAsync(cancellationToken))\n+        {\n+            orders.Add(ReadOrder(reader));\n+        }\n+\n+        return orders;\n+    }\n+\n     private static Order ReadOrder(SqliteDataReader reader) =>\n         new(\n             reader.GetInt32(0),",
+    "previous_filename": null
+  },
+  {
+    "filename": "src/Orders.Api/Services/OrderService.cs",
+    "status": "modified",
+    "additions": 3,
+    "deletions": 0,
+    "patch": "@@ -8,6 +8,9 @@ public sealed class OrderService(OrderRepository repository, PaymentClient payme\n     public Task<IReadOnlyList<Order>> SearchAsync(string customerName, CancellationToken cancellationToken) =>\n         repository.SearchByCustomerAsync(customerName, cancellationToken);\n \n+    public Task<IReadOnlyList<Order>> SearchByPrefixAsync(string prefix, CancellationToken cancellationToken) =>\n+        repository.SearchByPrefixAsync(prefix, cancellationToken);\n+\n     public async Task<bool> PayAsync(Order order, CancellationToken cancellationToken)\n     {\n         try",
+    "previous_filename": null
+  }
+]
