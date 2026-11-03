@@ -224,9 +224,9 @@ async def test_summary_counts_each_severity_of_kept_comments_only(
     github: FakeGitHub, store: QdrantStore, embedder: FakeEmbedder
 ) -> None:
     review = review_of(
-        draft(27, "high"),
-        draft(27, "medium"),
-        draft(28, "medium"),
+        draft(24, "high"),
+        draft(25, "medium"),
+        draft(26, "medium"),
         draft(27, "low"),
         draft(28, "low"),
         draft(29, "low"),

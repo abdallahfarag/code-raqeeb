@@ -106,7 +106,7 @@ def render_numbered_patch(patch: str) -> str:
 def added_lines_with_text(patch: str) -> list[tuple[int, str]]:
     added: list[tuple[int, str]] = []
     next_line = 0
-    for raw_line in patch.splitlines():
+    for raw_line in split_lines(patch):
         header = _HUNK_HEADER.match(raw_line)
         if header is not None:
             next_line = int(header["start"])
@@ -122,7 +122,7 @@ def added_lines_with_text(patch: str) -> list[tuple[int, str]]:
 
 def map_patch_lines(patch: str, transform: Callable[[str], str]) -> str:
     mapped: list[str] = []
-    for raw_line in patch.splitlines():
+    for raw_line in split_lines(patch):
         if not raw_line or raw_line.startswith("\\") or _HUNK_HEADER.match(raw_line):
             mapped.append(raw_line)
         else:

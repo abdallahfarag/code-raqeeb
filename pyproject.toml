@@ -58,3 +58,5 @@ reportMissingTypeStubs = false
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = ["-m", "not ml"]
+markers = ["ml: loads the real injection model, may download it (run with: pytest -m ml)"]

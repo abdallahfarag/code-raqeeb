@@ -1,8 +1,11 @@
+import logging
 from collections.abc import AsyncIterator, Callable, Iterator
 
 import httpx
 import pytest
 from fastapi import FastAPI
+from guardrails.classes.rc import RC
+from guardrails.settings import settings as guardrails_settings
 
 from code_raqeeb.api.dependencies import get_http_client
 from code_raqeeb.config import Settings, get_settings
@@ -12,6 +15,18 @@ QDRANT_TEST_URL = "http://qdrant.test:6333"
 
 type QdrantHandler = Callable[[httpx.Request], httpx.Response]
 type QdrantMockInstaller = Callable[[QdrantHandler], list[httpx.Request]]
+
+
+def _rc_without_metrics(logger: logging.Logger | None = None) -> RC:
+    return RC(enable_metrics=False)  # pyright: ignore[reportCallIssue]
+
+
+@pytest.fixture(autouse=True, scope="session")
+def no_guardrails_telemetry() -> Iterator[None]:
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(RC, "load", _rc_without_metrics)
+        patch.setattr(guardrails_settings, "rc", _rc_without_metrics())
+        yield
 
 
 @pytest.fixture(autouse=True)

@@ -4,6 +4,7 @@ from code_raqeeb.github.errors import GitHubError
 from code_raqeeb.github.service import PullRequestBundle
 from code_raqeeb.guardrails.paths import safe_repo_path
 from code_raqeeb.guardrails.secrets import redact_text
+from code_raqeeb.helper.text import split_lines
 from code_raqeeb.review.context import ReviewContext
 
 _MAX_READ_LINES = 200
@@ -64,7 +65,7 @@ def build_tools(ctx: ReviewContext, bundle: PullRequestBundle) -> list[BaseTool]
             content = await ctx.github.get_file_content(bundle.ref, safe_path, bundle.head_sha)
         except GitHubError as exc:
             return f"Could not read {safe_path}: {exc}"
-        selected = redact_text(content).splitlines()[start_line - 1 : end_line]
+        selected = split_lines(redact_text(content))[start_line - 1 : end_line]
         numbered = [
             f"{number:>6}  {text}" for number, text in enumerate(selected, start=start_line)
         ]
