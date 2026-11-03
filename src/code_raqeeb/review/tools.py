@@ -2,7 +2,8 @@ from langchain_core.tools import BaseTool, tool
 
 from code_raqeeb.github.errors import GitHubError
 from code_raqeeb.github.service import PullRequestBundle
-from code_raqeeb.helper.text import split_lines
+from code_raqeeb.guardrails.paths import safe_repo_path
+from code_raqeeb.guardrails.secrets import redact_text
 from code_raqeeb.review.context import ReviewContext
 
 _MAX_READ_LINES = 200
@@ -25,7 +26,7 @@ def build_tools(ctx: ReviewContext, bundle: PullRequestBundle) -> list[BaseTool]
             return "No matching code found."
         parts = [
             f"{hit.chunk.path}:{hit.chunk.start_line}-{hit.chunk.end_line} "
-            f"({hit.chunk.symbol})\n{hit.chunk.text}"
+            f"({hit.chunk.symbol})\n{redact_text(hit.chunk.text)}"
             for hit in hits
         ]
         return _clip("\n\n".join(parts))
@@ -56,11 +57,14 @@ def build_tools(ctx: ReviewContext, bundle: PullRequestBundle) -> list[BaseTool]
         if start_line < 1 or end_line < start_line:
             return "Invalid line range."
         end_line = min(end_line, start_line + _MAX_READ_LINES - 1)
+        safe_path = safe_repo_path(path)
+        if safe_path is None:
+            return "Path rejected: use a relative path inside the repository."
         try:
-            content = await ctx.github.get_file_content(bundle.ref, path, bundle.head_sha)
+            content = await ctx.github.get_file_content(bundle.ref, safe_path, bundle.head_sha)
         except GitHubError as exc:
-            return f"Could not read {path}: {exc}"
-        selected = split_lines(content)[start_line - 1 : end_line]
+            return f"Could not read {safe_path}: {exc}"
+        selected = redact_text(content).splitlines()[start_line - 1 : end_line]
         numbered = [
             f"{number:>6}  {text}" for number, text in enumerate(selected, start=start_line)
         ]

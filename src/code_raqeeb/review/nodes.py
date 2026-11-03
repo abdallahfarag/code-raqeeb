@@ -1,3 +1,4 @@
+import asyncio
 from collections import Counter
 from typing import Any, Literal
 
@@ -5,6 +6,8 @@ from langgraph.runtime import Runtime
 from langgraph.types import Send
 
 from code_raqeeb.github.service import PullRequestBundle, load_pull_request
+from code_raqeeb.guardrails.findings import scan_added_lines
+from code_raqeeb.guardrails.output import check_comments
 from code_raqeeb.rag.indexer import index_rules, index_snapshot
 from code_raqeeb.review.context import ReviewContext
 from code_raqeeb.review.models import to_comment
@@ -52,22 +55,38 @@ def fan_out(state: ReviewState) -> list[Send] | Literal["verify"]:
 async def review_file(state: FileTask, runtime: Runtime[ReviewContext]) -> dict[str, Any]:
     ctx = runtime.context
     bundle, file = state["bundle"], state["file"]
+    repo, head_sha = bundle.ref.full_name, bundle.head_sha
+    findings = await asyncio.to_thread(
+        scan_added_lines,
+        file,
+        repo=repo,
+        head_sha=head_sha,
+        injection_scanner=ctx.injection_scanner,
+    )
     try:
         drafts = await ctx.reviewer.review(bundle, file, build_tools(ctx, bundle))
     except Exception as exc:
-        return {"file_errors": [f"{file.path}: {type(exc).__name__}: {exc}"]}
+        return {
+            "comments": findings,
+            "file_errors": [f"{file.path}: {type(exc).__name__}: {exc}"],
+        }
     comments = [
         to_comment(draft, repo=bundle.ref.full_name, head_sha=bundle.head_sha, path=file.path)
         for draft in drafts
     ]
-    return {"comments": comments}
+    return {"comments": findings + comments}
 
 
-def verify(state: ReviewState) -> dict[str, Any]:
-    files = {file.path: file for file in _bundle(state).files}
-    comments = state["comments"]
-    kept = [c for c in comments if c.path in files and files[c.path].is_commentable(c.line)]
-    return {"verified_comments": kept, "dropped_comments": len(comments) - len(kept)}
+def verify(state: ReviewState, runtime: Runtime[ReviewContext]) -> dict[str, Any]:
+    settings = runtime.context.settings
+    check = check_comments(
+        state["comments"],
+        files={file.path: file for file in _bundle(state).files},
+        rules=get_rules(),
+        max_per_file=settings.max_comments_per_file,
+        max_chars=settings.max_comment_chars,
+    )
+    return {"verified_comments": list(check.kept), "dropped_comments": len(check.dropped)}
 
 
 def summarize(state: ReviewState) -> dict[str, Any]:

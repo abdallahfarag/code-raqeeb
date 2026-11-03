@@ -1,4 +1,5 @@
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from pydantic import BaseModel, ConfigDict
@@ -100,3 +101,30 @@ def render_numbered_patch(patch: str) -> str:
             rendered.append(f"{next_line:>6}   {raw_line[1:]}")
             next_line += 1
     return "\n".join(rendered)
+
+
+def added_lines_with_text(patch: str) -> list[tuple[int, str]]:
+    added: list[tuple[int, str]] = []
+    next_line = 0
+    for raw_line in patch.splitlines():
+        header = _HUNK_HEADER.match(raw_line)
+        if header is not None:
+            next_line = int(header["start"])
+        elif raw_line.startswith("+"):
+            added.append((next_line, raw_line[1:]))
+            next_line += 1
+        elif raw_line.startswith(("-", "\\")):
+            continue
+        else:
+            next_line += 1
+    return added
+
+
+def map_patch_lines(patch: str, transform: Callable[[str], str]) -> str:
+    mapped: list[str] = []
+    for raw_line in patch.splitlines():
+        if not raw_line or raw_line.startswith("\\") or _HUNK_HEADER.match(raw_line):
+            mapped.append(raw_line)
+        else:
+            mapped.append(raw_line[0] + transform(raw_line[1:]))
+    return "\n".join(mapped)

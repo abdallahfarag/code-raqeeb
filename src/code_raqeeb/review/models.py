@@ -39,5 +39,9 @@ def to_comment(draft: DraftComment, *, repo: str, head_sha: str, path: str) -> R
         rule_id=draft.rule_id,
         message=draft.message,
         suggestion=draft.suggestion,
-        permalink=f"https://github.com/{repo}/blob/{head_sha}/{path}#L{draft.line}",
+        permalink=permalink(repo, head_sha, path, draft.line),
     )
+
+
+def permalink(repo: str, head_sha: str, path: str, line: int) -> str:
+    return f"https://github.com/{repo}/blob/{head_sha}/{path}#L{line}"

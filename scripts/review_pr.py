@@ -8,6 +8,7 @@ from qdrant_client import AsyncQdrantClient
 from code_raqeeb.config import get_settings
 from code_raqeeb.github.client import GitHubClient
 from code_raqeeb.github.errors import GitHubError
+from code_raqeeb.guardrails.ml_injection import GorgetInjectionScanner
 from code_raqeeb.rag.embeddings import FastEmbedEmbedder
 from code_raqeeb.rag.indexer import RepoTooLargeError
 from code_raqeeb.rag.store import QdrantStore
@@ -38,6 +39,11 @@ async def main(url: str) -> int:
                 store=store,
                 embedder=embedder,
                 reviewer=reviewer,
+                injection_scanner=(
+                    await asyncio.to_thread(GorgetInjectionScanner, settings.injection_threshold)
+                    if settings.ml_injection_scanner
+                    else None
+                ),
             )
             result = await run_review(
                 graph, url, context, max_concurrency=settings.review_concurrency

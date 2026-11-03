@@ -18,7 +18,6 @@ _PR_URL = re.compile(
 
 class PrRef(BaseModel):
     model_config = ConfigDict(frozen=True)
-
     owner: str
     repo: str
     number: int = Field(gt=0)

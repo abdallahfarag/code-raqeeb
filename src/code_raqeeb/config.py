@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     review_concurrency: int = Field(default=3, ge=1)
     max_tool_rounds: int = Field(default=2, ge=0)
 
+    max_comments_per_file: int = Field(default=8, ge=1)
+    max_comment_chars: int = Field(default=600, ge=50)
+
+    ml_injection_scanner: bool = True
+    injection_threshold: float = Field(default=0.9, gt=0, lt=1)
+
 
 @lru_cache
 def get_settings() -> Settings:
