@@ -16,6 +16,7 @@ class ReviewState(TypedDict):
     verified_comments: NotRequired[list[ReviewComment]]
     dropped_comments: NotRequired[int]
     summary: NotRequired[str]
+    reviewed_files: Annotated[list[str], operator.add]
 
 
 class FileTask(TypedDict):

@@ -69,12 +69,13 @@ async def review_file(state: FileTask, runtime: Runtime[ReviewContext]) -> dict[
         return {
             "comments": findings,
             "file_errors": [f"{file.path}: {type(exc).__name__}: {exc}"],
+            "reviewed_files": [file.path],
         }
     comments = [
         to_comment(draft, repo=bundle.ref.full_name, head_sha=bundle.head_sha, path=file.path)
         for draft in drafts
     ]
-    return {"comments": findings + comments}
+    return {"comments": findings + comments, "reviewed_files": [file.path]}
 
 
 def verify(state: ReviewState, runtime: Runtime[ReviewContext]) -> dict[str, Any]:

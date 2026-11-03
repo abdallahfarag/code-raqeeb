@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     ml_injection_scanner: bool = True
     injection_threshold: float = Field(default=0.9, gt=0, lt=1)
 
+    langfuse_host: HttpUrl = HttpUrl("http://localhost:3000")
+    langfuse_public_key: str | None = None
+    langfuse_secret_key: SecretStr | None = None
+
 
 @lru_cache
 def get_settings() -> Settings:
