@@ -13,10 +13,12 @@ from code_raqeeb.config import Settings
 from code_raqeeb.github.client import GitHubClient
 from code_raqeeb.github.errors import GitHubError
 from code_raqeeb.github.models import PrRef
-from code_raqeeb.github.service import PullRequestBundle
+from code_raqeeb.github.service import PullRequestBundle, load_pull_request
 from code_raqeeb.guardrails.injection import InjectionScanner
+from code_raqeeb.guardrails.secrets import redact_text
 from code_raqeeb.rag.embeddings import FastEmbedEmbedder
-from code_raqeeb.rag.indexer import IndexReport, RepoTooLargeError
+from code_raqeeb.rag.indexer import IndexReport, RepoTooLargeError, index_rules, index_snapshot
+from code_raqeeb.rag.models import CodeHit, RuleHit
 from code_raqeeb.rag.store import QdrantStore
 from code_raqeeb.review.context import ReviewContext
 from code_raqeeb.review.graph import ReviewGraph, build_review_graph, run_review, stream_review
@@ -24,6 +26,7 @@ from code_raqeeb.review.llm import build_chat_model
 from code_raqeeb.review.models import ReviewComment
 from code_raqeeb.review.reviewer import FileReviewer
 from code_raqeeb.review.tracing import init_langfuse, tracing_callbacks
+from code_raqeeb.rules.loader import get_rules
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +151,35 @@ class ReviewService:
         await self._qdrant.close()
         if self._langfuse is not None:
             await asyncio.to_thread(self._langfuse.shutdown)
+
+    async def search_code(self, pr_url: str, query: str, limit: int) -> list[CodeHit]:
+        ctx = self._context
+        bundle = await load_pull_request(ctx.github, pr_url, ctx.settings)
+        await index_snapshot(
+            ctx.github,
+            ctx.store,
+            ctx.embedder,
+            bundle.ref,
+            bundle.base_sha,
+            max_files=ctx.settings.max_index_files,
+            max_chunk_lines=ctx.settings.max_chunk_lines,
+        )
+        embedding = await ctx.embedder.embed_query(query)
+        hits = await ctx.store.search_code(
+            bundle.ref.full_name, bundle.base_sha, embedding, limit=limit
+        )
+        return [
+            hit.model_copy(
+                update={"chunk": hit.chunk.model_copy(update={"text": redact_text(hit.chunk.text)})}
+            )
+            for hit in hits
+        ]
+
+    async def find_rules(self, query: str, limit: int) -> list[RuleHit]:
+        ctx = self._context
+        await index_rules(ctx.store, ctx.embedder, get_rules())
+        embedding = await ctx.embedder.embed_query(query)
+        return await ctx.store.search_rules(embedding, limit=limit)
 
 
 def _tags(pr_url: str) -> list[str]:

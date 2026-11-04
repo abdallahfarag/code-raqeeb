@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     langfuse_public_key: str | None = None
     langfuse_secret_key: SecretStr | None = None
 
+    mcp_host: str = "127.0.0.1"
+    mcp_port: int = Field(default=8001, ge=1, le=65535)
+
 
 @lru_cache
 def get_settings() -> Settings:
