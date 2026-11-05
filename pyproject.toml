@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
-    { name = "Abdallah Farag Abdelghani", email = "abdallahfarag797@hotmail.com" }
+    { name = "Abdallah Farag Abdelghani", email = "abdallahfarag797@hotmail.com" },
 ]
 requires-python = ">=3.12"
 dependencies = [
@@ -60,5 +60,8 @@ reportMissingTypeStubs = false
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = ["-m", "not ml"]
-markers = ["ml: loads the real injection model, may download it (run with: pytest -m ml)"]
+addopts = "-m 'not eval'"
+markers = [
+    "eval: real-LLM quality evals; run with -m eval (uses Gemini quota)",
+    "ml: loads the real injection model, may download it (run with: pytest -m ml)",
+]

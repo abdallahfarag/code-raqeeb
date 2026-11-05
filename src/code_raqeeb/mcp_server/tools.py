@@ -48,9 +48,10 @@ def register_tools(server: FastMCP) -> None:
         query: Annotated[str, Field(min_length=2, max_length=200, description="What to look for")],
         limit: Annotated[int, Field(ge=1, le=10, description="How many results")] = 5,
     ) -> list[CodeHit]:
+        url = checked_url(pr_url)
         service = await dependencies.get_service()
         try:
-            return await service.search_code(checked_url(pr_url), query, limit)
+            return await service.search_code(url, query, limit)
         except EXPECTED_ERRORS as exc:
             raise ToolError(str(exc)) from exc
 

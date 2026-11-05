@@ -10,6 +10,7 @@ class ExpectedFinding(BaseModel):
     line: int = Field(gt=0)
     category: Category
     rule_id: str
+    query: str | None = None
 
 
 class ExpectedReview(BaseModel):
