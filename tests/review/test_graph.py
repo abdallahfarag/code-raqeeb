@@ -103,7 +103,7 @@ async def node_order(github: FakeGitHub, store: QdrantStore, embedder: FakeEmbed
     reviewer = FileReviewer(ScriptedChatModel(replies=[]), max_tool_rounds=0)
     order: list[str] = []
     async for update in build_review_graph(InMemorySaver()).astream(
-        ReviewState(pr_url=PR_URL, comments=[], file_errors=[]),
+        ReviewState(pr_url=PR_URL, comments=[], file_errors=[], reviewed_files=[]),
         config={"configurable": {"thread_id": "order"}},
         context=make_context(github, store, embedder, reviewer),
         stream_mode="updates",
