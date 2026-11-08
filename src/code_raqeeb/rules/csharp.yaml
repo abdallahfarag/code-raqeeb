@@ -88,8 +88,8 @@ rules:
       id: ERR-01,
       category: bug,
       severity: high,
-      title: Swallowed exception,
-      description: "Empty catch, or catch that hides the error without logging or rethrowing.",
+      title: Catch block swallows the exception,
+      description: "A catch block hides the error instead of handling it: it is empty, or it only returns a default value (false, null, 0, empty list) or continues, without logging the exception or rethrowing it. Includes bare `catch { return false; }` and `catch (Exception) { }`. The caller and the logs never learn what failed.",
     }
   - {
       id: ERR-02,
@@ -166,7 +166,9 @@ rules:
       category: bug,
       severity: high,
       title: Off-by-one,
-      description: "Wrong bounds in loops, ranges, or Skip/Take paging.",
+      description: "Off-by-one error in an index, range, loop bound or paging calculation.
+      Common case: paging with Skip(page * pageSize) when page numbers start at 1,
+      which skips the whole first page; it should be Skip((page - 1) * pageSize).",
     }
   - {
       id: BUG-02,
