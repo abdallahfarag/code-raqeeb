@@ -17,6 +17,7 @@ def make_settings(
     github_concurrency: int = 5,
     max_review_files: int = 20,
     max_review_changed_lines: int = 800,
+    allow_private_repos: bool = False,
 ) -> Settings:
     return Settings(
         _env_file=None,  # pyright: ignore[reportCallIssue]
@@ -24,6 +25,7 @@ def make_settings(
         github_concurrency=github_concurrency,
         max_review_files=max_review_files,
         max_review_changed_lines=max_review_changed_lines,
+        allow_private_repos=allow_private_repos,
     )
 
 

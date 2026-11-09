@@ -12,7 +12,7 @@ def create_server() -> FastMCP:
     server = FastMCP(
         "Code Raqeeb",
         instructions=(
-            "Reviews public GitHub pull requests that change C# code. Every comment links to "
+            "Reviews GitHub pull requests that change C# code. Every comment links to "
             "the exact line. All tools are read-only and never write to GitHub."
         ),
     )

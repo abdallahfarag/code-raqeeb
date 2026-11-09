@@ -3,7 +3,7 @@ from pydantic import BaseModel, ConfigDict
 from code_raqeeb.config import Settings
 from code_raqeeb.github.client import GitHubClient
 from code_raqeeb.github.diff import ChangedFile, parse_patch
-from code_raqeeb.github.errors import PrivateRepoError
+from code_raqeeb.github.errors import PrivateRepoError, PrNotFoundError
 from code_raqeeb.github.filters import SkippedFile, enforce_limits, skip_reason
 from code_raqeeb.github.models import PrRef, PullRequest
 
@@ -32,8 +32,12 @@ async def load_pull_request(
     pull_request = await client.get_pull_request(ref)
 
     base_repo = pull_request.base.repo
-    if base_repo is None or base_repo.private:
-        raise PrivateRepoError(f"{ref.full_name} is not a public repository")
+    if base_repo is None:
+        raise PrNotFoundError(f"{ref.full_name}: the pull request's repository is not available")
+    if base_repo.private and not settings.allow_private_repos:
+        raise PrivateRepoError(
+            f"{ref.full_name} is private; set ALLOW_PRIVATE_REPOS=true to review private repos"
+        )
 
     files: list[ChangedFile] = []
     skipped: list[SkippedFile] = []

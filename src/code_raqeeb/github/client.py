@@ -99,7 +99,7 @@ def _raise_for_status(response: httpx.Response) -> None:
     status = response.status_code
     if status == 404:
         raise PrNotFoundError(
-            "Not found on GitHub: the PR does not exist, or the repository is private"
+            "Not found on GitHub: the PR does not exist, or your token cannot see this repository"
         )
     remaining = response.headers.get("x-ratelimit-remaining")
     if status == 429 or (status == 403 and remaining == "0"):

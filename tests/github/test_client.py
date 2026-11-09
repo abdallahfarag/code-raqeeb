@@ -204,3 +204,18 @@ async def test_list_tree_raises_when_truncated(make_github_client: GitHubClientF
 
     with pytest.raises(GitHubApiError, match="octo/hello"):
         await client.list_tree(REF, HEAD_SHA)
+
+
+async def test_404_message_mentions_token_access(make_github_client: GitHubClientFactory) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, json={"message": "Not Found"})
+
+    client = make_github_client(handler, make_settings())
+
+    with pytest.raises(PrNotFoundError) as caught:
+        await client.get_pull_request(REF)
+
+    assert str(caught.value) == (
+        "Not found on GitHub: the PR does not exist, or your token cannot see this repository"
+    )
+    assert "private" not in str(caught.value)

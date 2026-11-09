@@ -2,7 +2,12 @@ import httpx
 import pytest
 
 from code_raqeeb.github.diff import DiffHunk
-from code_raqeeb.github.errors import InvalidPrUrlError, PrivateRepoError, PrTooLargeError
+from code_raqeeb.github.errors import (
+    InvalidPrUrlError,
+    PrivateRepoError,
+    PrNotFoundError,
+    PrTooLargeError,
+)
 from code_raqeeb.github.filters import SkippedFile
 from code_raqeeb.github.service import load_pull_request
 from tests.github.conftest import GitHubClientFactory, SyncHandler
@@ -67,20 +72,82 @@ async def test_happy_path_splits_files_and_parses_hunks(
     )
 
 
-@pytest.mark.parametrize(
-    "base_repo",
-    [pytest.param(repo_payload(private=True), id="private"), pytest.param(None, id="repo-none")],
-)
-async def test_non_public_repo_rejected(
-    make_github_client: GitHubClientFactory, base_repo: Json | None
+ALLOW_PRIVATE = [
+    pytest.param(False, id="private-not-allowed"),
+    pytest.param(True, id="private-allowed"),
+]
+
+
+@pytest.mark.parametrize("allow_private_repos", ALLOW_PRIVATE)
+async def test_public_repo_loads_with_either_setting(
+    make_github_client: GitHubClientFactory, allow_private_repos: bool
 ) -> None:
     requests: list[httpx.Request] = []
-    handler = github_api(pr_payload(base_repo=base_repo), [], requests)
-    settings = make_settings()
+    files = [file_payload("src/Greeter.cs", patch=GREETER_PATCH)]
+    handler = github_api(pr_payload(base_repo=repo_payload(private=False)), files, requests)
+    settings = make_settings(allow_private_repos=allow_private_repos)
 
-    with pytest.raises(PrivateRepoError):
+    bundle = await load_pull_request(make_github_client(handler, settings), PR_URL, settings)
+
+    assert [f.path for f in bundle.files] == ["src/Greeter.cs"]
+    assert bundle.skipped == ()
+
+
+async def test_private_repo_rejected_by_default(make_github_client: GitHubClientFactory) -> None:
+    requests: list[httpx.Request] = []
+    files = [file_payload("src/Greeter.cs")]
+    handler = github_api(pr_payload(base_repo=repo_payload(private=True)), files, requests)
+    settings = make_settings()
+    assert settings.allow_private_repos is False
+
+    with pytest.raises(PrivateRepoError) as caught:
         await load_pull_request(make_github_client(handler, settings), PR_URL, settings)
 
+    assert "ALLOW_PRIVATE_REPOS" in str(caught.value)
+    assert "octo/hello" in str(caught.value)
+    # rejected before the files are listed
+    assert [r.url.path for r in requests] == ["/repos/octo/hello/pulls/7"]
+
+
+async def test_private_repo_loads_with_its_files_when_allowed(
+    make_github_client: GitHubClientFactory,
+) -> None:
+    requests: list[httpx.Request] = []
+    files = [
+        file_payload("src/Greeter.cs", additions=2, deletions=1, patch=GREETER_PATCH),
+        file_payload("docs/README.md"),
+    ]
+    handler = github_api(pr_payload(base_repo=repo_payload(private=True)), files, requests)
+    settings = make_settings(allow_private_repos=True)
+
+    bundle = await load_pull_request(make_github_client(handler, settings), PR_URL, settings)
+
+    assert bundle.ref == REF
+    assert bundle.base_sha == BASE_SHA
+    [greeter] = bundle.files
+    assert greeter.path == "src/Greeter.cs"
+    assert greeter.patch == GREETER_PATCH
+    assert len(greeter.hunks) == 2
+    assert bundle.skipped == (SkippedFile(path="docs/README.md", reason="not a C# file"),)
+    assert [r.url.path for r in requests] == [
+        "/repos/octo/hello/pulls/7",
+        "/repos/octo/hello/pulls/7/files",
+    ]
+
+
+@pytest.mark.parametrize("allow_private_repos", ALLOW_PRIVATE)
+async def test_missing_base_repo_raises_pr_not_found(
+    make_github_client: GitHubClientFactory, allow_private_repos: bool
+) -> None:
+    requests: list[httpx.Request] = []
+    handler = github_api(pr_payload(base_repo=None), [file_payload("src/A.cs")], requests)
+    settings = make_settings(allow_private_repos=allow_private_repos)
+
+    with pytest.raises(PrNotFoundError) as caught:
+        await load_pull_request(make_github_client(handler, settings), PR_URL, settings)
+
+    assert type(caught.value) is PrNotFoundError
+    assert "octo/hello" in str(caught.value)
     assert [r.url.path for r in requests] == ["/repos/octo/hello/pulls/7"]
 
 

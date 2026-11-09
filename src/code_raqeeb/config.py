@@ -54,6 +54,8 @@ class Settings(BaseSettings):
     mcp_host: str = "127.0.0.1"
     mcp_port: int = Field(default=8001, ge=1, le=65535)
 
+    allow_private_repos: bool = False
+
 
 @lru_cache
 def get_settings() -> Settings:

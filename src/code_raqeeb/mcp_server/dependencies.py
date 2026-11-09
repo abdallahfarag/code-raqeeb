@@ -13,9 +13,7 @@ READ_ONLY = {"readOnlyHint": True, "openWorldHint": True}
 
 PrUrl = Annotated[
     str,
-    Field(
-        description="A public GitHub pull request URL: https://github.com/{owner}/{repo}/pull/{n}"
-    ),
+    Field(description="A GitHub pull request URL: https://github.com/{owner}/{repo}/pull/{n}"),
 ]
 
 _service: ReviewService | None = None

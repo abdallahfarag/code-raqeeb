@@ -1,5 +1,6 @@
+import re
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from fastmcp import Client
@@ -376,3 +377,35 @@ async def test_nothing_is_written_to_stdout_during_calls(
         await mcp.call_tool("review_pr", {"pr_url": PR_URL})
 
     assert capsys.readouterr().out == ""
+
+
+def schema_descriptions(node: object) -> list[str]:
+    found: list[str] = []
+    if isinstance(node, dict):
+        for key, value in cast(dict[str, object], node).items():
+            if key == "description" and isinstance(value, str):
+                found.append(value)
+            else:
+                found.extend(schema_descriptions(value))
+    elif isinstance(node, list):
+        for item in cast(list[object], node):
+            found.extend(schema_descriptions(item))
+    return found
+
+
+async def test_no_tool_or_parameter_description_says_public(mcp: McpClient) -> None:
+    descriptions: list[str] = []
+    for tool in await mcp.list_tools():
+        assert tool.description is not None
+        descriptions.append(tool.description)
+        descriptions.extend(schema_descriptions(tool.input_schema))
+
+    assert any("pull request URL" in text for text in descriptions)
+    assert [text for text in descriptions if re.search(r"\bpublic\b", text, re.I)] == []
+
+
+def test_server_instructions_do_not_say_public() -> None:
+    instructions = create_server().instructions
+
+    assert instructions is not None
+    assert re.search(r"\bpublic\b", instructions, re.I) is None

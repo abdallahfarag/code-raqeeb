@@ -6,6 +6,8 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
+from code_raqeeb.config import Settings
+from code_raqeeb.github.client import GitHubClient
 from code_raqeeb.github.errors import (
     GitHubApiError,
     GitHubError,
@@ -14,6 +16,7 @@ from code_raqeeb.github.errors import (
     PrTooLargeError,
     RateLimitError,
 )
+from code_raqeeb.github.service import load_pull_request
 from code_raqeeb.guardrails.input import MAX_URL_LENGTH
 from code_raqeeb.rag.indexer import RepoTooLargeError
 from code_raqeeb.review.models import ReviewComment
@@ -211,3 +214,34 @@ async def test_sync_maps_errors_to_status_codes_with_the_message_as_detail(
 
     assert response.status_code == status_code
     assert response.json() == {"detail": str(error)}
+
+
+async def test_sync_returns_403_for_the_private_repo_error_from_the_loader(
+    client: httpx.AsyncClient, service: FakeReviewService
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        repo = {"full_name": "octo/hello", "private": True}
+        pull = {
+            "number": 7,
+            "title": "t",
+            "state": "open",
+            "html_url": PR_URL,
+            "base": {"ref": "main", "sha": "base000", "repo": repo},
+            "head": {"ref": "feature", "sha": "head111", "repo": None},
+            "additions": 1,
+            "deletions": 0,
+            "changed_files": 1,
+        }
+        return httpx.Response(200, json=pull)
+
+    settings = Settings(_env_file=None)  # pyright: ignore[reportCallIssue]
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        with pytest.raises(PrivateRepoError) as caught:
+            await load_pull_request(GitHubClient(http, settings), PR_URL, settings)
+    service.error = caught.value
+
+    response = await client.post("/reviews/sync", json={"pr_url": PR_URL})
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": str(caught.value)}
+    assert "ALLOW_PRIVATE_REPOS" in response.json()["detail"]

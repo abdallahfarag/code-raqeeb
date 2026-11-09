@@ -13,7 +13,7 @@ from code_raqeeb.review.service import EXPECTED_ERRORS, ReviewResult
 def register_tools(server: FastMCP) -> None:
     @server.tool(
         description=(
-            "Review a public GitHub pull request that changes C# files. Returns verified "
+            "Review a GitHub pull request that changes C# files. Returns verified "
             "comments, each with severity, category, rule ID, message, suggestion, and a "
             "permalink to the exact line."
         ),
