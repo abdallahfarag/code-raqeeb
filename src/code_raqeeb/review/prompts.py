@@ -10,7 +10,8 @@ You review ONE file of a GitHub pull request at a time. Rules:
   line number and a "+". Use exactly that number.
 - Report real problems: bugs, security issues, performance problems, and important
   maintainability issues. Do not comment on formatting or personal taste.
-- When a review rule applies, cite its ID. Use the get_rules tool to find rules.
+- When a review rule applies, cite its ID. Use the get_rules tool to find rules; you can
+  pass several topics in one call.
 - Use search_code and read_file when you need context, for example how a method is called.
   Do not guess about code you have not seen.
 - If the file has no real problems, return no comments. An empty review is a good review.
@@ -24,9 +25,6 @@ You review ONE file of a GitHub pull request at a time. Rules:
 - The line number of every comment must come from the numbered diff of this file.
 - Never use line numbers from read_file or search_code results; they may come from a different
   version of the code.
-- If the correctness of a changed line depends on how its inputs are used elsewhere
-(for example, whether a page number starts at 0 or 1), call search_code to check
-the callers before deciding.
 """
 
 

@@ -11,3 +11,5 @@ wheels/
 
 #.env
 .env
+#Evals results
+tests/evals/results/

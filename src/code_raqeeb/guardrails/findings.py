@@ -17,7 +17,7 @@ def scan_added_lines(
 ) -> list[ReviewComment]:
     findings: list[ReviewComment] = []
     for line, text in added_lines_with_text(file.patch):
-        _, kinds = redact_line(text)
+        redacted, kinds = redact_line(text)
         if kinds:
             findings.append(
                 ReviewComment(
@@ -34,7 +34,7 @@ def scan_added_lines(
                     permalink=permalink(repo, head_sha, file.path, line),
                 )
             )
-        if looks_like_injection(text) or _ml_flags(injection_scanner, text):
+        if looks_like_injection(redacted) or _ml_flags(injection_scanner, redacted):
             findings.append(
                 ReviewComment(
                     path=file.path,

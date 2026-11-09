@@ -1,5 +1,5 @@
 import re
-from typing import cast
+from typing import cast, override
 
 import pytest
 from langchain_core.tools import BaseTool
@@ -7,10 +7,12 @@ from langchain_core.tools import BaseTool
 from code_raqeeb.github.client import GitHubClient
 from code_raqeeb.github.errors import GitHubApiError, GitHubError, PrNotFoundError, RateLimitError
 from code_raqeeb.github.service import PullRequestBundle
+from code_raqeeb.rag.embeddings import Embedding
 from code_raqeeb.rag.indexer import index_rules, index_snapshot
 from code_raqeeb.rag.store import QdrantStore
 from code_raqeeb.review.tools import build_tools
 from code_raqeeb.rules.loader import get_rules
+from code_raqeeb.rules.models import ReviewRule, RuleSet
 from tests.rag.fakes import FakeEmbedder
 from tests.review.conftest import idle_reviewer, make_context
 from tests.review.fakes import (
@@ -116,30 +118,169 @@ async def test_search_code_output_is_clipped(
     assert len(output) == MAX_TOOL_TEXT + len(TRUNCATED)
 
 
-async def test_get_rules_lists_rule_ids_with_details(
+async def test_get_rules_lists_rule_ids_with_details_under_the_topic(
     github: FakeGitHub, store: QdrantStore, embedder: FakeEmbedder, bundle: PullRequestBundle
 ) -> None:
     rules = get_rules()
     await index_rules(store, embedder, rules)
     get_rules_tool = tools_for(github, store, embedder, bundle)["get_rules"]
 
-    output = await call(get_rules_tool, query="RES-01")
+    output = await call(get_rules_tool, topics=["RES-01"])
 
-    lines = output.splitlines()
-    assert 1 <= len(lines) <= 5
-    ids = [re.match(r"[A-Z]{3}-\d{2}", line) for line in lines]
-    assert all(match is not None and rules.get(match[0]) is not None for match in ids)
+    [heading, *lines] = output.splitlines()
+    assert heading == "Topic: RES-01"
+    assert 1 <= len(lines) <= 3
+    ids = [re.match(r"- ([A-Z]{3}-\d{2}) ", line) for line in lines]
+    assert all(match is not None and rules.get(match[1]) is not None for match in ids)
     rule = rules.get("RES-01")
     assert rule is not None
-    assert f"RES-01 ({rule.category}, {rule.severity}): {rule.title}. {rule.description}" in lines
+    assert f"- RES-01 ({rule.category}, {rule.severity}): {rule.title}. {rule.description}" in lines
 
 
-async def test_get_rules_says_so_when_there_are_none(
+async def test_get_rules_says_so_when_a_topic_has_no_rules(
     github: FakeGitHub, store: QdrantStore, embedder: FakeEmbedder, bundle: PullRequestBundle
 ) -> None:
     get_rules_tool = tools_for(github, store, embedder, bundle)["get_rules"]
 
-    assert await call(get_rules_tool, query="anything") == "No rules found."
+    output = await call(get_rules_tool, topics=["anything"])
+
+    assert output == "Topic: anything\n- No rules found."
+
+
+class RecordingEmbedder(FakeEmbedder):
+    def __init__(self) -> None:
+        super().__init__()
+        self.queries: list[str] = []
+
+    @override
+    async def embed_query(self, text: str) -> Embedding:
+        self.queries.append(text)
+        return await super().embed_query(text)
+
+
+def topic_rule(rule_id: str, title: str, description: str) -> ReviewRule:
+    return ReviewRule(
+        id=rule_id, category="bug", severity="medium", title=title, description=description
+    )
+
+
+TOPIC_RULES = RuleSet(
+    language="csharp",
+    rules=(
+        topic_rule("TST-01", "SqlCommand concatenation", "SqlCommand text joined with input."),
+        topic_rule("TST-02", "Thread Sleep", "Thread Sleep blocks a request thread."),
+        topic_rule("TST-03", "Empty catch", "Exceptions swallowed by an empty catch."),
+        topic_rule("TST-04", "Magic number", "Unnamed numeric literal in logic."),
+        topic_rule("TST-05", "DateTime Now", "DateTime Now used where UTC is expected."),
+    ),
+)
+
+
+@pytest.fixture
+async def recording(store: QdrantStore) -> RecordingEmbedder:
+    recorder = RecordingEmbedder()
+    await index_rules(store, recorder, TOPIC_RULES)
+    return recorder
+
+
+def sections(output: str) -> dict[str, list[str]]:
+    grouped: dict[str, list[str]] = {}
+    for block in output.split("\n\n"):
+        [heading, *lines] = block.splitlines()
+        grouped[heading.removeprefix("Topic: ")] = lines
+    return grouped
+
+
+def listed_ids(lines: list[str]) -> list[str]:
+    return [line.removeprefix("- ").split(" ", 1)[0] for line in lines]
+
+
+async def test_get_rules_groups_several_topics_in_one_call(
+    github: FakeGitHub, store: QdrantStore, recording: RecordingEmbedder, bundle: PullRequestBundle
+) -> None:
+    get_rules_tool = tools_for(github, store, recording, bundle)["get_rules"]
+
+    output = await call(get_rules_tool, topics=["SqlCommand", "Thread Sleep"])
+
+    grouped = sections(output)
+    assert list(grouped) == ["SqlCommand", "Thread Sleep"]
+    assert recording.queries == ["SqlCommand", "Thread Sleep"]
+    assert all(1 <= len(lines) <= 3 for lines in grouped.values())
+    assert listed_ids(grouped["SqlCommand"])[0] == "TST-01"
+    assert listed_ids(grouped["Thread Sleep"])[0] == "TST-02"
+
+
+async def test_get_rules_describes_a_rule_found_by_two_topics_once(
+    github: FakeGitHub, store: QdrantStore, recording: RecordingEmbedder, bundle: PullRequestBundle
+) -> None:
+    get_rules_tool = tools_for(github, store, recording, bundle)["get_rules"]
+
+    output = await call(get_rules_tool, topics=["SqlCommand", "SqlCommand text"])
+
+    grouped = sections(output)
+    first, second = grouped["SqlCommand"], grouped["SqlCommand text"]
+    assert "TST-01" in listed_ids(first) and "TST-01" in listed_ids(second)
+    assert "- TST-01 (listed above)" in second
+    assert output.count("TST-01 (bug, medium): SqlCommand concatenation.") == 1
+    # Every rule is described in full exactly once across all topics
+    described = [line for line in output.splitlines() if "(bug, medium)" in line]
+    assert len(described) == len(set(listed_ids(first + second)))
+
+
+async def test_get_rules_searches_at_most_six_topics(
+    github: FakeGitHub, store: QdrantStore, recording: RecordingEmbedder, bundle: PullRequestBundle
+) -> None:
+    get_rules_tool = tools_for(github, store, recording, bundle)["get_rules"]
+    topics = [f"topic{n}" for n in range(1, 9)]
+
+    output = await call(get_rules_tool, topics=topics)
+
+    assert list(sections(output)) == topics[:6]
+    assert recording.queries == topics[:6]
+
+
+async def test_get_rules_ignores_blank_topics_and_strips_the_rest(
+    github: FakeGitHub, store: QdrantStore, recording: RecordingEmbedder, bundle: PullRequestBundle
+) -> None:
+    get_rules_tool = tools_for(github, store, recording, bundle)["get_rules"]
+    topics = ["", "   ", "  Thread Sleep  ", "\t", "a", "b", "c", "d", "e", "f"]
+
+    output = await call(get_rules_tool, topics=topics)
+
+    # Blank topics do not use up the six-topic budget
+    expected = ["Thread Sleep", "a", "b", "c", "d", "e"]
+    assert list(sections(output)) == expected
+    assert recording.queries == expected
+
+
+@pytest.mark.parametrize(
+    "topics",
+    [pytest.param([], id="empty"), pytest.param(["", "  ", "\n"], id="only-blank")],
+)
+async def test_get_rules_asks_for_a_topic_without_searching(
+    github: FakeGitHub,
+    store: QdrantStore,
+    recording: RecordingEmbedder,
+    bundle: PullRequestBundle,
+    topics: list[str],
+) -> None:
+    get_rules_tool = tools_for(github, store, recording, bundle)["get_rules"]
+
+    assert await call(get_rules_tool, topics=topics) == "Give at least one topic."
+    assert recording.queries == []
+
+
+async def test_get_rules_input_schema_is_a_list_of_strings(
+    github: FakeGitHub, store: QdrantStore, embedder: FakeEmbedder, bundle: PullRequestBundle
+) -> None:
+    get_rules_tool = tools_for(github, store, embedder, bundle)["get_rules"]
+
+    schema = get_rules_tool.get_input_jsonschema()
+
+    assert list(schema["properties"]) == ["topics"]
+    assert schema["properties"]["topics"]["type"] == "array"
+    assert schema["properties"]["topics"]["items"] == {"type": "string"}
+    assert schema["required"] == ["topics"]
 
 
 def numbered_file(count: int) -> str:
